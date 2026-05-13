@@ -245,6 +245,13 @@
       color: #888;
       margin-bottom: .15rem;
     }
+    .film-card .label-sm .hint {
+      margin-left: .4rem;
+      font-size: .65rem;
+      letter-spacing: .02em;
+      text-transform: none;
+      color: #b8b8b8;
+    }
     .film-card .field-block { flex: 1; min-width: 140px; }
     .film-card input[type="file"] { font-size: .8rem; }
     .film-card .film-actions {
@@ -330,7 +337,7 @@
     <div class="content-area">
 
       <div class="section-panel active" data-panel="films">
-        <p class="section-desc">Add, remove, or reorder films. Each film gets its own page at <code>/films/&lt;slug&gt;.html</code>. The cover image, title, tag, and Vimeo ID all show on the homepage and on the film's standalone page.</p>
+        <p class="section-desc">Add, remove, or reorder films. Each film gets its own page at <code>/films/&lt;slug&gt;.html</code>. The Video field accepts a Vimeo or YouTube ID (or full URL) &mdash; it picks the right embed automatically.</p>
         <div id="films-container"></div>
         <button class="btn-add" onclick="addFilm()">+ Add Film</button>
       </div>
@@ -402,6 +409,16 @@ let pendingImages = [];
 let currentSection = 'films';
 
 const TAG_OPTIONS = ['documentary', 'film', 'event', 'commercials', 'music-video'];
+
+function detectVideoLabel(raw) {
+  const t = String(raw == null ? '' : raw).trim();
+  if (!t) return '';
+  const isVimeo = /vimeo\.com\//i.test(t) || /^\d+$/.test(t);
+  const isYouTube = /youtube\.com\/|youtu\.be\//i.test(t) || /^[\w-]{11}$/.test(t);
+  if (isVimeo) return '— detected as Vimeo';
+  if (isYouTube) return '— detected as YouTube';
+  return '— not recognized';
+}
 
 function escAttr(s) {
   if (typeof s !== 'string') return '';
@@ -555,9 +572,9 @@ function renderFilms() {
                 oninput="content.films[${i}].slug=this.value.toLowerCase().replace(/[^a-z0-9-]+/g,'-')">
             </div>
             <div class="field-block">
-              <div class="label-sm">Vimeo ID</div>
-              <input type="text" placeholder="123456789" value="${escAttr(film.vimeoId || '')}"
-                oninput="content.films[${i}].vimeoId=this.value.replace(/[^0-9]/g,'')">
+              <div class="label-sm">Video <span class="hint" id="video-hint-${i}">${detectVideoLabel(film.video)}</span></div>
+              <input type="text" placeholder="Vimeo or YouTube ID / URL" value="${escAttr(film.video || '')}"
+                oninput="content.films[${i}].video=this.value.trim();document.getElementById('video-hint-${i}').textContent=detectVideoLabel(this.value)">
             </div>
           </div>
           <div class="field-block">
@@ -601,7 +618,7 @@ function addFilm() {
     tag: 'film',
     slug: slug,
     image: '',
-    vimeoId: ''
+    video: ''
   });
   renderFilms();
 }

@@ -222,7 +222,7 @@ for (const { arrayPath, index, pos } of eachPositions) {
   /* ── PER-ARRAY PARSERS ────────────────────────────────────────── */
 
   if (arrayPath === 'films') {
-    // <a class="card" href="films/SLUG.html" data-adlib-each="films" data-adlib-index="N" data-vimeo-id="ID">
+    // <a class="card" href="films/SLUG.html" data-adlib-each="films" data-adlib-index="N" data-video="VIDEO">
     //   <div class="card-image-wrap"><img src="IMAGE" alt="TITLE"></div>
     //   <div class="card-title">TITLE</div>
     //   <span class="tag">#TAG</span>
@@ -231,8 +231,8 @@ for (const { arrayPath, index, pos } of eachPositions) {
     const slugMatch = href.match(/films\/(.+)\.html$/);
     const slug = slugMatch ? slugMatch[1] : '';
 
-    const vimeoMatch = openingTag.match(/\bdata-vimeo-id="([^"]*)"/);
-    const vimeoId = vimeoMatch ? vimeoMatch[1] : '';
+    const videoMatch = openingTag.match(/\bdata-video="([^"]*)"/);
+    const video = videoMatch ? videoMatch[1] : '';
 
     const imgMatch = innerHTML.match(/<img[^>]*\bsrc="([^"]+)"/);
     const image = imgMatch ? imgMatch[1] : '';
@@ -244,7 +244,7 @@ for (const { arrayPath, index, pos } of eachPositions) {
     const tagRaw = tagMatch ? textContent(tagMatch[1]) : '';
     const tag = tagRaw.replace(/^#/, '');
 
-    setPath(content, `films.${index}`, { title, tag, slug, image, vimeoId });
+    setPath(content, `films.${index}`, { title, tag, slug, image, video });
   }
 }
 

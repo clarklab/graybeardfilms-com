@@ -30,6 +30,37 @@ function esc(s) {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * parseVideo(s) — recognize a Vimeo or YouTube ID/URL.
+ * Returns { type: 'vimeo' | 'youtube' | '', id, embedSrc }.
+ */
+function parseVideo(s) {
+  const t = String(s == null ? '' : s).trim();
+  if (!t) return { type: '', id: '', embedSrc: '' };
+
+  let m = t.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
+  if (m) return vimeo(m[1]);
+
+  m = t.match(/youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)([\w-]{11})/i);
+  if (m) return youtube(m[1]);
+
+  m = t.match(/youtu\.be\/([\w-]{11})/i);
+  if (m) return youtube(m[1]);
+
+  if (/^\d+$/.test(t)) return vimeo(t);
+  if (/^[\w-]{11}$/.test(t)) return youtube(t);
+
+  return { type: '', id: '', embedSrc: '' };
+}
+
+function vimeo(id) {
+  return { type: 'vimeo', id, embedSrc: `https://player.vimeo.com/video/${id}?title=0&byline=0&portrait=0` };
+}
+
+function youtube(id) {
+  return { type: 'youtube', id, embedSrc: `https://www.youtube.com/embed/${id}?rel=0` };
+}
+
 const LOGO_SVG = `<svg class="logo" viewBox="0 0 74 68" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
   <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round">
     <g class="graybeard" transform="translate(-13, -16)" stroke="#54534A" stroke-width="1.9991">
@@ -120,7 +151,7 @@ function sidebar(logoHref, filmsHref, contactHref, current) {
 
 function buildIndex() {
   const titleField = `  <title data-adlib-cms="meta.title">${esc(meta.title)}</title>`;
-  const cards = films.map((film, i) => `      <a class="card" href="films/${esc(film.slug)}.html" data-adlib-each="films" data-adlib-index="${i}" data-vimeo-id="${esc(film.vimeoId)}">
+  const cards = films.map((film, i) => `      <a class="card" href="films/${esc(film.slug)}.html" data-adlib-each="films" data-adlib-index="${i}" data-video="${esc(film.video || '')}">
         <div class="card-image-wrap">
           <img src="${esc(film.image)}" alt="${esc(film.title)}" loading="lazy">
         </div>
@@ -157,7 +188,15 @@ ${sidebar('index.html', 'index.html', 'contact.html', 'contact')}
 
 function buildFilmPage(film) {
   const pageTitle = `${film.title} — ${meta.siteName}`;
-  const iframeSrc = `https://player.vimeo.com/video/${esc(film.vimeoId)}?title=0&byline=0&portrait=0`;
+  const v = parseVideo(film.video);
+  const embed = v.embedSrc
+    ? `<iframe
+          src="${v.embedSrc}"
+          allow="autoplay; fullscreen; picture-in-picture${v.type === 'youtube' ? '; encrypted-media' : ''}"
+          allowfullscreen
+          loading="lazy"
+          title="${esc(film.title)}"></iframe>`
+    : `<div class="video-empty">No video set for this film yet.</div>`;
   return `${head(pageTitle, '../styles.css')}
 ${sidebar('../index.html', '../index.html', '../contact.html', 'films')}
   <main class="main">
@@ -166,12 +205,7 @@ ${sidebar('../index.html', '../index.html', '../contact.html', 'films')}
       <span class="tag">#${esc(film.tag)}</span>
       <h1 class="video-title">${esc(film.title)}</h1>
       <div class="video-embed">
-        <iframe
-          src="${iframeSrc}"
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowfullscreen
-          loading="lazy"
-          title="${esc(film.title)}"></iframe>
+        ${embed}
       </div>
     </article>
   </main>
