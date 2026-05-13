@@ -12,8 +12,14 @@ exports.handler = async (event) => {
   }
 
   const { password } = JSON.parse(event.body);
+  const expected = process.env.ADMIN_PASSWORD;
 
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
+  console.log('[verify] envSet=' + (expected != null) +
+              ' envLen=' + (expected ? expected.length : 0) +
+              ' suppliedLen=' + (password ? password.length : 0) +
+              ' match=' + (password === expected));
+
+  if (!password || password !== expected) {
     return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
 
