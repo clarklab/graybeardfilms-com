@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Graybeard Films</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%231a1a1a'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='14' font-weight='700' fill='%23f7f7f7' text-anchor='middle'%3ECMS%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #f7f7f7;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #1a1a1a;
+      color: #f7f7f7;
+    }
+    #login-screen h1 { font-size: 2rem; font-weight: 700; margin-bottom: .25rem; letter-spacing: -.02em; }
+    #login-screen p  { opacity: .6; margin-bottom: 2rem; font-size: .875rem; }
+    #login-screen input {
+      width: 280px;
+      padding: .75rem 1rem;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: #2a2a2a;
+      color: #f7f7f7;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      font-family: inherit;
+    }
+    #login-screen input::placeholder { color: #888; }
+    #login-screen button {
+      width: 280px;
+      padding: .75rem;
+      border: none;
+      border-radius: 6px;
+      background: #fff;
+      color: #1a1a1a;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .2s;
+    }
+    #login-screen button:hover { opacity: .85; }
+    #login-error { color: #ff6b6b; margin-top: .75rem; font-size: .85rem; display: none; }
+
+    #admin-shell { display: none; }
+    #admin-shell.active { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px;
+      background: #1a1a1a;
+      color: #f7f7f7;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      padding: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      border-bottom: 1px solid #333;
+    }
+    .sidebar nav { flex: 1; padding: .5rem 0; }
+    .sidebar button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: .75rem 1.5rem;
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: .9rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .15s, color .15s;
+    }
+    .sidebar button:hover { background: #2a2a2a; color: #fff; }
+    .sidebar button.active { background: #333; color: #fff; font-weight: 600; }
+    .sidebar-footer { padding: 1rem 1.5rem; border-top: 1px solid #333; }
+    .sidebar-footer button {
+      padding: .5rem 1rem;
+      font-size: .8rem;
+      border-radius: 4px;
+      background: #333;
+      color: #ccc;
+    }
+    .sidebar-footer button:hover { background: #444; color: #fff; }
+
+    .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topbar h2 { font-size: 1.15rem; font-weight: 600; }
+    .topbar-actions { display: flex; gap: .75rem; align-items: center; }
+    #status-msg { font-size: .85rem; color: #888; transition: opacity .3s; }
+    .btn-save {
+      padding: .55rem 1.25rem;
+      border: none;
+      border-radius: 6px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .2s;
+    }
+    .btn-save:hover { opacity: .8; }
+    .btn-save:disabled { opacity: .4; cursor: not-allowed; }
+
+    .content-area { padding: 2rem; max-width: 900px; }
+
+    .section-panel { display: none; }
+    .section-panel.active { display: block; }
+    .section-desc { color: #888; font-size: .9rem; margin-bottom: 1.75rem; }
+
+    .field { margin-bottom: 1.5rem; }
+    .field label {
+      display: block;
+      font-weight: 600;
+      font-size: .85rem;
+      margin-bottom: .4rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .field input,
+    .field textarea,
+    .field select {
+      width: 100%;
+      padding: .65rem .85rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: .95rem;
+      font-family: inherit;
+      background: #fff;
+      color: #1a1a1a;
+      transition: border-color .2s;
+    }
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus { outline: none; border-color: #1a1a1a; }
+    .field textarea { min-height: 100px; resize: vertical; }
+
+    .image-upload { margin-bottom: 1.5rem; }
+    .image-upload label {
+      display: block;
+      font-weight: 600;
+      font-size: .85rem;
+      margin-bottom: .4rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .image-preview {
+      width: 100%;
+      max-width: 320px;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      margin-bottom: .5rem;
+      display: block;
+      background: #eee;
+    }
+    .image-upload input[type="file"] { font-size: .85rem; margin-top: .25rem; }
+
+    h3.dyn-heading {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 1.75rem 0 .75rem;
+      padding-bottom: .4rem;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .film-card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      position: relative;
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 1.25rem;
+    }
+    .film-card .film-thumb {
+      width: 120px;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      border-radius: 6px;
+      background: #eee;
+    }
+    .film-card .film-thumb-empty {
+      width: 120px;
+      aspect-ratio: 3 / 4;
+      border-radius: 6px;
+      background: #eee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: .75rem;
+    }
+    .film-card .film-fields { display: flex; flex-direction: column; gap: .6rem; }
+    .film-card .film-fields .row { display: flex; gap: .6rem; flex-wrap: wrap; }
+    .film-card .film-fields input,
+    .film-card .film-fields select {
+      flex: 1;
+      min-width: 140px;
+      padding: .5rem .7rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      font-size: .9rem;
+      font-family: inherit;
+      background: #fff;
+    }
+    .film-card .film-fields input:focus,
+    .film-card .film-fields select:focus { outline: none; border-color: #1a1a1a; }
+    .film-card .film-fields .label-sm {
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: #888;
+      margin-bottom: .15rem;
+    }
+    .film-card .field-block { flex: 1; min-width: 140px; }
+    .film-card input[type="file"] { font-size: .8rem; }
+    .film-card .film-actions {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: .5rem;
+      justify-content: flex-end;
+      border-top: 1px solid #f0f0f0;
+      padding-top: .75rem;
+    }
+    .film-card .film-actions button {
+      padding: .35rem .8rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      background: #fff;
+      color: #555;
+      font-size: .8rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .film-card .film-actions button:hover { border-color: #1a1a1a; color: #1a1a1a; }
+    .film-card .film-actions .btn-delete { color: #c33; border-color: #f3d0d0; }
+    .film-card .film-actions .btn-delete:hover { background: #fff0f0; color: #a00; border-color: #c33; }
+
+    .btn-add {
+      display: inline-block;
+      padding: .55rem 1.1rem;
+      border: 1px dashed #ccc;
+      border-radius: 6px;
+      background: none;
+      color: #888;
+      font-size: .85rem;
+      cursor: pointer;
+      margin-top: .5rem;
+      font-family: inherit;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-add:hover { border-color: #1a1a1a; color: #1a1a1a; }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 200px; }
+      .main { margin-left: 200px; }
+      .content-area { padding: 1.25rem; }
+      .film-card { grid-template-columns: 80px 1fr; }
+      .film-card .film-thumb,
+      .film-card .film-thumb-empty { width: 80px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="login-screen">
+  <h1>Admin</h1>
+  <p>Graybeard Films</p>
+  <input type="password" id="password-input" placeholder="Enter password" autocomplete="current-password">
+  <button onclick="login()">Sign In</button>
+  <div id="login-error">Incorrect password. Please try again.</div>
+</div>
+
+<div id="admin-shell">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">Graybeard CMS</div>
+    <nav id="sidebar-nav">
+      <button data-section="films" class="active">Films</button>
+      <button data-section="contact">Contact</button>
+      <button data-section="meta">SEO / Meta</button>
+    </nav>
+    <div class="sidebar-footer">
+      <button onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <h2 id="topbar-title">Films</h2>
+      <div class="topbar-actions">
+        <span id="status-msg"></span>
+        <button class="btn-save" onclick="saveChanges()">Save Changes</button>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <div class="section-panel active" data-panel="films">
+        <p class="section-desc">Add, remove, or reorder films. Each film gets its own page at <code>/films/&lt;slug&gt;.html</code>. The cover image, title, tag, and Vimeo ID all show on the homepage and on the film's standalone page.</p>
+        <div id="films-container"></div>
+        <button class="btn-add" onclick="addFilm()">+ Add Film</button>
+      </div>
+
+      <div class="section-panel" data-panel="contact">
+        <p class="section-desc">Contact page content.</p>
+        <div class="field">
+          <label>Heading</label>
+          <input type="text" data-field="contact.heading">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" data-field="contact.email">
+        </div>
+        <div class="field">
+          <label>City</label>
+          <input type="text" data-field="contact.city">
+        </div>
+      </div>
+
+      <div class="section-panel" data-panel="meta">
+        <p class="section-desc">Page title, description, and social-sharing tags. These appear in the browser tab and when the site is shared on social media.</p>
+        <div class="field">
+          <label>Page Title</label>
+          <input type="text" data-field="meta.title">
+        </div>
+        <div class="field">
+          <label>Meta Description</label>
+          <textarea data-field="meta.description"></textarea>
+        </div>
+        <div class="field">
+          <label>OG Title</label>
+          <input type="text" data-field="meta.ogTitle">
+        </div>
+        <div class="field">
+          <label>OG Description</label>
+          <textarea data-field="meta.ogDescription"></textarea>
+        </div>
+        <div class="field">
+          <label>OG Image (URL or repo path)</label>
+          <input type="text" data-field="meta.ogImage">
+        </div>
+        <div class="image-upload" id="og-image-upload">
+          <label>Upload OG Image</label>
+          <div id="og-image-preview-wrap"></div>
+          <input type="file" accept="image/*" onchange="handleImageUpload(this, 'meta.ogImage', 'assets/og.jpg', 'og-image-preview-wrap')">
+        </div>
+        <div class="field">
+          <label>Twitter Card Type</label>
+          <input type="text" data-field="meta.twitterCard">
+        </div>
+        <div class="field">
+          <label>Site URL</label>
+          <input type="text" data-field="meta.siteUrl">
+        </div>
+        <div class="field">
+          <label>Site Name</label>
+          <input type="text" data-field="meta.siteName">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+let content = null;
+let pendingImages = [];
+let currentSection = 'films';
+
+const TAG_OPTIONS = ['documentary', 'film', 'event', 'commercials', 'music-video'];
+
+function escAttr(s) {
+  if (typeof s !== 'string') return '';
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function slugify(s) {
+  return String(s)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'untitled';
+}
+
+function getPath(obj, path) {
+  return path.split('.').reduce((o, k) => {
+    if (o == null) return undefined;
+    if (/^\d+$/.test(k)) return o[parseInt(k, 10)];
+    return o[k];
+  }, obj);
+}
+
+function setPath(obj, path, value) {
+  const keys = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = /^\d+$/.test(keys[i]) ? parseInt(keys[i], 10) : keys[i];
+    if (cur[k] == null) cur[k] = /^\d+$/.test(keys[i + 1]) ? [] : {};
+    cur = cur[k];
+  }
+  const last = /^\d+$/.test(keys[keys.length - 1]) ? parseInt(keys[keys.length - 1], 10) : keys[keys.length - 1];
+  cur[last] = value;
+}
+
+function showStatus(msg, duration) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  if (duration) setTimeout(() => { el.style.opacity = '0'; }, duration);
+}
+
+function login() {
+  const pw = document.getElementById('password-input').value.trim();
+  if (!pw) return;
+  devLogin(pw);
+}
+
+function devLogin(pw) {
+  sessionStorage.setItem('admin_pw', pw);
+  showStatus('Signing in...');
+  loadContent().then(() => {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-shell').classList.add('active');
+    showStatus('');
+  }).catch(() => {
+    sessionStorage.removeItem('admin_pw');
+    document.getElementById('login-error').style.display = 'block';
+    showStatus('');
+  });
+}
+
+function logout() {
+  sessionStorage.removeItem('admin_pw');
+  content = null;
+  pendingImages = [];
+  document.getElementById('admin-shell').classList.remove('active');
+  document.getElementById('login-screen').style.display = '';
+  document.getElementById('password-input').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+async function loadContent() {
+  const pw = sessionStorage.getItem('admin_pw');
+  const verify = await fetch('/.netlify/functions/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw })
+  });
+  if (!verify.ok) throw new Error('Unauthorized');
+  const res = await fetch('/content.json?_=' + Date.now());
+  if (!res.ok) throw new Error('Failed to load content');
+  content = await res.json();
+  populateForms();
+}
+
+function showSection(name) {
+  currentSection = name;
+  document.querySelectorAll('#sidebar-nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.section === name);
+  });
+  document.querySelectorAll('.section-panel').forEach(p => {
+    p.classList.toggle('active', p.dataset.panel === name);
+  });
+  const btn = document.querySelector(`#sidebar-nav button[data-section="${name}"]`);
+  document.getElementById('topbar-title').textContent = btn ? btn.textContent : name;
+}
+
+document.querySelectorAll('#sidebar-nav button').forEach(btn => {
+  btn.addEventListener('click', () => showSection(btn.dataset.section));
+});
+
+function populateForms() {
+  if (!content) return;
+  document.querySelectorAll('[data-field]').forEach(el => {
+    const val = getPath(content, el.dataset.field);
+    el.value = val != null ? val : '';
+  });
+  renderFilms();
+  renderOgImage();
+}
+
+function gatherContent() {
+  if (!content) return;
+  document.querySelectorAll('[data-field]').forEach(el => {
+    setPath(content, el.dataset.field, el.value);
+  });
+}
+
+function renderFilms() {
+  const c = document.getElementById('films-container');
+  if (!content.films) content.films = [];
+
+  c.innerHTML = content.films.map((film, i) => {
+    const tagOptions = TAG_OPTIONS.map(opt =>
+      `<option value="${opt}"${film.tag === opt ? ' selected' : ''}>${opt}</option>`
+    ).join('');
+    const customTag = film.tag && !TAG_OPTIONS.includes(film.tag)
+      ? `<option value="${escAttr(film.tag)}" selected>${escAttr(film.tag)}</option>`
+      : '';
+    const thumb = film.image
+      ? `<img class="film-thumb" src="/${escAttr(film.image)}?_=${Date.now()}" alt="" id="thumb-${i}">`
+      : `<div class="film-thumb-empty" id="thumb-${i}">No image</div>`;
+
+    return `
+      <div class="film-card" data-film-index="${i}">
+        ${thumb}
+        <div class="film-fields">
+          <div class="field-block">
+            <div class="label-sm">Title</div>
+            <input type="text" placeholder="Film title" value="${escAttr(film.title || '')}"
+              oninput="content.films[${i}].title=this.value">
+          </div>
+          <div class="row">
+            <div class="field-block">
+              <div class="label-sm">Tag</div>
+              <select onchange="content.films[${i}].tag=this.value">${customTag}${tagOptions}</select>
+            </div>
+            <div class="field-block">
+              <div class="label-sm">Slug (URL)</div>
+              <input type="text" placeholder="my-film" value="${escAttr(film.slug || '')}"
+                oninput="content.films[${i}].slug=this.value.toLowerCase().replace(/[^a-z0-9-]+/g,'-')">
+            </div>
+            <div class="field-block">
+              <div class="label-sm">Vimeo ID</div>
+              <input type="text" placeholder="123456789" value="${escAttr(film.vimeoId || '')}"
+                oninput="content.films[${i}].vimeoId=this.value.replace(/[^0-9]/g,'')">
+            </div>
+          </div>
+          <div class="field-block">
+            <div class="label-sm">Cover image</div>
+            <input type="text" placeholder="path/to/image.jpg" value="${escAttr(film.image || '')}"
+              oninput="content.films[${i}].image=this.value;updateThumb(${i})">
+            <input type="file" accept="image/*"
+              onchange="handleFilmImageUpload(this, ${i})">
+          </div>
+        </div>
+        <div class="film-actions">
+          <button onclick="moveFilm(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&uarr; Up</button>
+          <button onclick="moveFilm(${i}, 1)" ${i === content.films.length - 1 ? 'disabled' : ''}>&darr; Down</button>
+          <button class="btn-delete" onclick="deleteFilm(${i})">Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateThumb(i) {
+  const wrap = document.querySelector(`.film-card[data-film-index="${i}"]`);
+  if (!wrap) return;
+  const existing = wrap.querySelector('.film-thumb, .film-thumb-empty');
+  if (!existing) return;
+  const src = content.films[i].image;
+  if (src) {
+    const isAbs = src.startsWith('/') || src.startsWith('http') || src.startsWith('data:');
+    const url = isAbs ? src : '/' + src + '?_=' + Date.now();
+    existing.outerHTML = `<img class="film-thumb" src="${escAttr(url)}" alt="" id="thumb-${i}">`;
+  } else {
+    existing.outerHTML = `<div class="film-thumb-empty" id="thumb-${i}">No image</div>`;
+  }
+}
+
+function addFilm() {
+  if (!content.films) content.films = [];
+  const slug = 'new-film-' + (content.films.length + 1);
+  content.films.push({
+    title: 'New Film',
+    tag: 'film',
+    slug: slug,
+    image: '',
+    vimeoId: ''
+  });
+  renderFilms();
+}
+
+function deleteFilm(i) {
+  if (!confirm('Delete this film? (Save to make permanent.)')) return;
+  content.films.splice(i, 1);
+  renderFilms();
+}
+
+function moveFilm(i, delta) {
+  const j = i + delta;
+  if (j < 0 || j >= content.films.length) return;
+  const [item] = content.films.splice(i, 1);
+  content.films.splice(j, 0, item);
+  renderFilms();
+}
+
+function handleFilmImageUpload(input, i) {
+  const file = input.files[0];
+  if (!file) return;
+  const slug = content.films[i].slug || ('film-' + i);
+  const ext = (file.name.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0].toLowerCase();
+  const uploadPath = `assets/films/${slug}${ext}`;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const wrap = document.querySelector(`.film-card[data-film-index="${i}"]`);
+    if (!wrap) return;
+    const existing = wrap.querySelector('.film-thumb, .film-thumb-empty');
+    if (existing) {
+      existing.outerHTML = `<img class="film-thumb" src="${e.target.result}" alt="" id="thumb-${i}">`;
+    }
+  };
+  reader.readAsDataURL(file);
+
+  content.films[i].image = uploadPath;
+  pendingImages = pendingImages.filter(p => p.path !== uploadPath);
+  pendingImages.push({ path: uploadPath, file: file });
+
+  const textInput = input.parentElement.querySelector('input[type="text"]');
+  if (textInput) textInput.value = uploadPath;
+}
+
+function renderOgImage() {
+  const wrap = document.getElementById('og-image-preview-wrap');
+  if (!wrap || !content.meta) return;
+  const src = content.meta.ogImage;
+  if (src) {
+    const isAbs = src.startsWith('/') || src.startsWith('http') || src.startsWith('data:');
+    const url = isAbs ? src : '/' + src + '?_=' + Date.now();
+    wrap.innerHTML = `<img class="image-preview" src="${escAttr(url)}" alt="OG image">`;
+  } else {
+    wrap.innerHTML = '';
+  }
+}
+
+function handleImageUpload(input, fieldPath, uploadPath, previewWrapId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const wrap = document.getElementById(previewWrapId);
+    wrap.innerHTML = `<img class="image-preview" src="${e.target.result}" alt="Preview">`;
+  };
+  reader.readAsDataURL(file);
+  setPath(content, fieldPath, uploadPath);
+  const urlInput = document.querySelector(`[data-field="${fieldPath}"]`);
+  if (urlInput) urlInput.value = uploadPath;
+  pendingImages = pendingImages.filter(p => p.path !== uploadPath);
+  pendingImages.push({ path: uploadPath, file: file, fieldPath: fieldPath });
+}
+
+async function saveChanges() {
+  const pw = sessionStorage.getItem('admin_pw');
+  if (!pw) { showStatus('Not signed in', 3000); return; }
+
+  const btn = document.querySelector('.btn-save');
+  btn.disabled = true;
+  showStatus('Saving...');
+
+  try {
+    gatherContent();
+
+    for (const img of pendingImages) {
+      showStatus(`Uploading ${img.path}...`);
+      const base64 = await fileToBase64(img.file);
+      const res = await fetch('/.netlify/functions/upload-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw, path: img.path, data: base64 })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Image upload failed for ${img.path}`);
+      }
+    }
+    pendingImages = [];
+
+    showStatus('Saving content...');
+    const res = await fetch('/.netlify/functions/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw, content: content })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        showStatus('Unauthorized. Please sign in again.', 4000);
+        logout();
+        return;
+      }
+      throw new Error(err.error || 'Save failed');
+    }
+
+    showStatus('Saved successfully!', 3000);
+  } catch (err) {
+    showStatus('Error: ' + err.message, 5000);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function init() {
+  const pw = sessionStorage.getItem('admin_pw');
+  if (pw) devLogin(pw);
+  document.getElementById('password-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') login();
+  });
+}
+
+init();
+</script>
+</body>
+</html>

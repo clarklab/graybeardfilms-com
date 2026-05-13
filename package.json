@@ -1,0 +1,8 @@
+{
+  "name": "graybeard-films",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "extract": "node extract.js"
+  }
+}

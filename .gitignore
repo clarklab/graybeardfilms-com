@@ -1,0 +1,8 @@
+# Netlify CLI working files
+.netlify
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
